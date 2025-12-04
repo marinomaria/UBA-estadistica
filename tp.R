@@ -101,15 +101,12 @@ y_th <- p_func(se_real, sp_real, x_th)
 p3 <- crear_grafico_individual(x_th, y_th, "$\\theta$", "Variación en $\\theta$", theta_real, show_yaxis = FALSE)
 
 # Combinamos los tres gráficos
-grafico_final <- p1 + p2 + p3 + 
-  plot_annotation(
-    title = TeX("Análisis de Sensibilidad de $p$"),
-    theme = theme(
-      plot.title = element_text(face = "bold", size = 16, family = "serif")
-      )
-  )
+grafico_final <- p1 + p2 + p3 
 
 print(grafico_final)
+
+rm(list = ls()) # Borramos variables de ambiente para el próximo ejercicio
+
 
 
 
