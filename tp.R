@@ -1,4 +1,7 @@
-library(latex2exp) # Para gráficos
+# Librerías para gráficos
+library(ggplot2)
+library(latex2exp)
+library(patchwork)
 
 set.seed(72) # Libreta de Delfina Kiss, 72/23
 
@@ -31,38 +34,82 @@ rm(list = ls()) # Borramos variables de ambiente para el próximo ejercicio
 
 # ----- Ejercicio 2.3: gráficos de p -----
 
-se_real = 0.9
-sp_real = 0.95
-theta_real = 0.25
+se_real <- 0.9
+sp_real <- 0.95
+theta_real <- 0.25
 
 # Definimos la función p
-p <- function(se, sp, theta) {
+p_func <- function(se, sp, theta) {
   return(theta * (se + sp - 1) + 1 - sp)
 }
 
-par(mfrow = c(1, 3)) 
+p_actual <- p_func(se_real, sp_real, theta_real)
 
-curve(p(x, sp_real, theta_real), 
-      from = 0, to = 1, 
-      main = TeX("Variación en $Se$"),
-      xlab = TeX("$Se$"), ylab = TeX("$p(Se, Sp, \theta)$"),
-      col = "blue", lwd = 2)
-grid()
+crear_grafico_individual <- function(
+    x_range,
+    y_vals,
+    x_lab, 
+    title,
+    intercept_x,
+    show_yaxis = TRUE
+    ) {
+  
+  data <- data.frame(x = x_range, y = y_vals)
+  
+  plot_obj <- ggplot(data, aes(x = x, y = y)) +
+    geom_line(color = "#78911d", size = 1) + 
+    # Agregamos un punto con el valor real del param
+    geom_point(aes(x = intercept_x, y = p_actual), 
+               color = "#E74C3C", size = 1.5) +
+    labs(
+      title = TeX(title),
+      x = TeX(x_lab),
+      y = if(show_yaxis) TeX("$p(Se, Sp, \\theta)$") else NULL
+    ) +
+    theme_bw(base_family = "serif") +
+    theme(
+      plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
+      panel.grid.minor = element_blank(),
+      axis.title = element_text(size = 11)
+    ) +
+    coord_cartesian(ylim = c(0, 1), expand = FALSE)
+  
+  if (!show_yaxis) {
+    plot_obj <- plot_obj + 
+      theme(
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank()
+      )
+  }
+  
+  return(plot_obj)
+}
 
-curve(p(se_real, x, theta_real), 
-      from = 0, to = 1, 
-      main = TeX("Variación en $Sp$"),
-      xlab = TeX("$Sp$"), ylab = TeX("$p(Se, Sp, \theta)$"),
-      col = "green", lwd = 2)
-grid()
+# Primer gráfico variando Se
+x_se <- seq(0, 1, length.out = 100)
+y_se <- p_func(x_se, sp_real, theta_real)
+p1 <- crear_grafico_individual(x_se, y_se, "$Se$", "Variación en $Se$", se_real)
 
-curve(p(se_real, sp_real, x), 
-      from = 0, to = 1, 
-      main = TeX("Variación en $\theta$"),
-      xlab = TeX("$\theta$"), ylab = TeX("$p(Se, Sp, \theta)$"),
-      col = "purple", lwd = 2)
-grid()
+# Segundo gráfico variando Sp
+x_sp <- seq(0, 1, length.out = 100)
+y_sp <- p_func(se_real, x_sp, theta_real)
+p2 <- crear_grafico_individual(x_sp, y_sp, "$Sp$", "Variación en $Sp$", sp_real, show_yaxis = FALSE)
 
+# Tercer gráfico variando theta
+x_th <- seq(0, 1, length.out = 100)
+y_th <- p_func(se_real, sp_real, x_th)
+p3 <- crear_grafico_individual(x_th, y_th, "$\\theta$", "Variación en $\\theta$", theta_real, show_yaxis = FALSE)
+
+# Combinamos los tres gráficos
+grafico_final <- p1 + p2 + p3 + 
+  plot_annotation(
+    title = TeX("Análisis de Sensibilidad de $p$"),
+    theme = theme(
+      plot.title = element_text(face = "bold", size = 16, family = "serif")
+      )
+  )
+
+print(grafico_final)
 
 
 
