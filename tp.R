@@ -155,7 +155,7 @@ ggplot(matriz_de_comparacion, aes(x = n, y = value, color = func_type)) +
   
   coord_cartesian(expand = FALSE, ylim = c(0, 0.3), xlim = c(1, 50))
 
-# ----- Ejercicio 2.1.7: simulación Monte Carlo-----
+# ----- Ejercicio 2.1.7: simulación Monte Carlo -----
 
 n <- 100
 Nrep <- 1000
@@ -214,5 +214,71 @@ ggplot(datos_bootstrap, aes(x = theta_est)) +
     plot.title = element_text(face = "bold", hjust = 0.5, size = 12),
     panel.grid.minor = element_blank(),
     axis.title = element_text(size = 11))
+
+
+# ----- Ejercicio 3.1.2: obtención de datos para evaluar test -----
+
+n <- 100
+theta_pre <- 0.2
+theta_post <- 0.15
+p_pre <- p_func(SE0, SP0, theta_pre)
+p_post <- p_func(SE0, SP0, theta_post)
+
+X_pre <- rbinom(n = n, size = 1, p_pre)
+X_post <- rbinom(n = n, size = 1, p_post)
+
+prom_pre <- mean(X_pre)
+prom_post <- mean(X_post)
+
+# Bajo H0 asumimos que p_pre = p_post, así que juntamos todos los positivos
+p_hat_H0 <- (sum(X_pre) + sum(X_post)) / (2 * n)
+
+res <- data.frame(
+  Pre  = c(p_pre, prom_pre), 
+  Post = c(p_post, prom_post)
+)
+row.names(res) <- c("p real", "Promedio Muestral")
+print(res)
+cat(sprintf("Estimador combinado de p (H0): %.4f\n", p_hat_H0))
+
+# ----- Ejercicio 3.1.3: nivel empírico del test -----
+
+n_scenarios <- matrix(c(
+  15, 20,
+  56, 40,
+  100, 100, 
+  10, 100, 
+  500, 458,
+  1245, 1455
+), ncol = 2, byrow = TRUE)
+
+prop_rechazos <- numeric(nrow(n_scenarios))
+alpha <- 0.05
+z_alpha <- qnorm(1 - alpha/2) 
+
+for (i in 1:nrow(n_scenarios)) {
+  n_pre <- n_scenarios[i, 1]
+  n_post <- n_scenarios[i, 2]
+  
+  x_pre <- rbinom(n = Nrep, size = n_pre, prob = p_func(SE0, SP0, theta_pre))
+  x_post <- rbinom(n = Nrep, size = n_post, prob = p_func(SE0, SP0, theta_post))
+  
+  p_hat_pre <- x_pre / n_pre
+  p_hat_post <- x_post / n_post
+  
+  p_pool <- (x_pre + x_post) / (n_pre + n_post)
+  
+  pivote_h0 <- (p_hat_post - p_hat_pre) / sqrt(p_pool * (1 - p_pool) * (1/n_pre + 1/n_post))
+  
+  rechazos <- abs(pivote_h0) >= z_alpha
+  
+  prop_rechazos[i] <- mean(rechazos)
+}
+
+print(data.frame(n_pre = n_scenarios[,1], n_post = n_scenarios[,2], Potencia = prop_rechazos))
+
+
+
+
 
 
