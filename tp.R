@@ -469,8 +469,6 @@ print(data.frame(
   Nivel_Empirico = prop_rechazos
   ))
 
-print(data.frame(n_pre = n_scenarios[,1], n_post = n_scenarios[,2], Potencia = prop_rechazos))
-
 
 
 
