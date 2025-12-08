@@ -3,7 +3,7 @@ library(ggplot2)
 library(latex2exp)
 library(patchwork)
 
-set.seed(72) # Libreta de Delfina Kiss, 72/23
+set.seed(72) # Libreta de Maria Delfina Kiss, 72/23
 # Fijamos los parámetros de Theta, Se y Sp del enunciado
 THETA0 <- 0.25
 SE0 <- 0.90
@@ -155,14 +155,13 @@ ggplot(matriz_de_comparacion, aes(x = n, y = value, color = func_type)) +
   
   coord_cartesian(expand = FALSE, ylim = c(0, 0.3), xlim = c(1, 50))
 
-# ----- Ejercicio 2.1.7: simulación Monte Carlo -----
+# ----- Ejercicio 2.1.7: simulación Monte Carlo-----
 
 n <- 100
 Nrep <- 1000
 
 # Usamos la fórmula derivada en el inciso 2.0.2
 p_val <- THETA0 * (SE0 + SP0 - 1) + (1 - SP0)
-
 T_sum <- rbinom(n = Nrep, size = n, prob = p_val)
 
 T_promedio <- T_sum / n
@@ -216,69 +215,150 @@ ggplot(datos_bootstrap, aes(x = theta_est)) +
     axis.title = element_text(size = 11))
 
 
-# ----- Ejercicio 3.1.2: obtención de datos para evaluar test -----
 
-n <- 100
-theta_pre <- 0.2
-theta_post <- 0.15
-p_pre <- p_func(SE0, SP0, theta_pre)
-p_post <- p_func(SE0, SP0, theta_post)
+# ----- Ejercicio 2.2: intervalos de confianza bootstrap -----
 
-X_pre <- rbinom(n = n, size = 1, p_pre)
-X_post <- rbinom(n = n, size = 1, p_post)
+# Definimos los distintos n
+n=c(5,10,20,50,100,1000)
 
-prom_pre <- mean(X_pre)
-prom_post <- mean(X_post)
+# Método no parametrico
+cubrimiento_cuantil_samp <- c(0,0,0,0,0,0)
+cubrimiento_normal_samp <- c(0,0,0,0,0,0)
 
-# Bajo H0 asumimos que p_pre = p_post, así que juntamos todos los positivos
-p_hat_H0 <- (sum(X_pre) + sum(X_post)) / (2 * n)
+longitud_cuantil_samp <- c(0,0,0,0,0,0)
+longitud_normal_samp <- c(0,0,0,0,0,0)
 
-res <- data.frame(
-  Pre  = c(p_pre, prom_pre), 
-  Post = c(p_post, prom_post)
-)
-row.names(res) <- c("p real", "Promedio Muestral")
-print(res)
-cat(sprintf("Estimador combinado de p (H0): %.4f\n", p_hat_H0))
+estimadores <- c(0,0,0,0,0,0)
 
-# ----- Ejercicio 3.1.3: nivel empírico del test -----
+titas.boot.samp <- matrix(0 , nrow = 6, ncol = 2500)
 
-n_scenarios <- matrix(c(
-  15, 20,
-  56, 40,
-  100, 100, 
-  10, 100, 
-  500, 458,
-  1245, 1455
-), ncol = 2, byrow = TRUE)
+N_2 <- 1000
 
-prop_rechazos <- numeric(nrow(n_scenarios))
-alpha <- 0.05
-z_alpha <- qnorm(1 - alpha/2) 
-
-for (i in 1:nrow(n_scenarios)) {
-  n_pre <- n_scenarios[i, 1]
-  n_post <- n_scenarios[i, 2]
-  
-  x_pre <- rbinom(n = Nrep, size = n_pre, prob = p_func(SE0, SP0, theta_pre))
-  x_post <- rbinom(n = Nrep, size = n_post, prob = p_func(SE0, SP0, theta_post))
-  
-  p_hat_pre <- x_pre / n_pre
-  p_hat_post <- x_post / n_post
-  
-  p_pool <- (x_pre + x_post) / (n_pre + n_post)
-  
-  pivote_h0 <- (p_hat_post - p_hat_pre) / sqrt(p_pool * (1 - p_pool) * (1/n_pre + 1/n_post))
-  
-  rechazos <- abs(pivote_h0) >= z_alpha
-  
-  prop_rechazos[i] <- mean(rechazos)
+for (k in 1:N_2){
+  for (j in 1:6){
+    muestra <- rbinom(n[j],1,p_func(SE0,SP0,THETA0))
+    estimadores[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    muestras_boot <- replicate(2500, sample(muestra, replace = TRUE))
+    titas.boot.samp[j, ] <- (colMeans(muestras_boot) + SP0 - 1) / (SE0 + SP0 - 1)
+  }
+  for (h in 1:6){
+    se <- sqrt(mean((titas.boot.samp[h,] - mean(titas.boot.samp[h,]))**2))
+    intervalo_normal_samp <- c(estimadores[h]-qnorm(0.975)*se, estimadores[h]+qnorm(0.975)*se)
+    longitud_normal_samp[h] <- longitud_normal_samp[h]+intervalo_normal_samp[2]-intervalo_normal_samp[1]
+    cubrimiento_normal_samp[h] <- cubrimiento_normal_samp[h]+(0.25>=intervalo_normal_samp[1] && 0.25<=intervalo_normal_samp[2])
+    
+    titas.boot.samp[h,] <- sort(titas.boot.samp[h,])
+    intervalo_cuantil_samp <- c(quantile(titas.boot.samp[h,], 0.025), quantile(titas.boot.samp[h,], 0.975))
+    longitud_cuantil_samp[h] <- longitud_cuantil_samp[h]+intervalo_cuantil_samp[2]-intervalo_cuantil_samp[1]
+    cubrimiento_cuantil_samp[h] <- cubrimiento_cuantil_samp[h]+(0.25>=intervalo_cuantil_samp[1] && 0.25<=intervalo_cuantil_samp[2])
+  }
 }
 
-print(data.frame(n_pre = n_scenarios[,1], n_post = n_scenarios[,2], Potencia = prop_rechazos))
+longitud_normal_samp <- longitud_normal_samp/N_2
+cubrimiento_normal_samp <- cubrimiento_normal_samp/N_2
+longitud_cuantil_samp <- longitud_cuantil_samp/N_2
+cubrimiento_cuantil_samp <- cubrimiento_cuantil_samp/N_2
+
+resultados_comparacion_samp <- data.frame(
+  n = n,
+  Cubrimiento_Percentil = cubrimiento_cuantil_samp,
+  Longitud_Percentil = longitud_cuantil_samp,
+  Cubrimiento_Normal = cubrimiento_normal_samp,
+  Longitud_Normal = longitud_normal_samp
+)
+
+print(resultados_comparacion_samp)
+
+# Metodo parametrico
+
+cubrimiento_cuantil_param <- c(0,0,0,0,0,0)
+cubrimiento_normal_param <- c(0,0,0,0,0,0)
+
+longitud_cuantil_param <- c(0,0,0,0,0,0)
+longitud_normal_param <- c(0,0,0,0,0,0)
+
+estimadores_param <- c(0,0,0,0,0,0)
+
+titas.boot.param <- matrix(0 , nrow = 6, ncol = 2500)
+
+for (k in 1:N_2){
+  for (j in 1:6){
+    muestra <- rbinom(n[j],1,p_func(SE0,SP0,THETA0))
+    estimadores[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    muestras_boot <- replicate(2500, sample(muestra, replace = TRUE))
+    titas.boot.param[j, ] <- (colMeans(muestras_boot) + SP0 - 1) / (SE0 + SP0 - 1)
+  }
+  for (h in 1:6){
+    se <- sqrt(mean((titas.boot.param[h,] - mean(titas.boot.param[h,]))**2))
+    intervalo_normal_param <- c(estimadores_param[h]-qnorm(0.975)*se, estimadores_param[h]+qnorm(0.975)*se)
+    longitud_normal_param[h] <- longitud_normal_param[h]+intervalo_normal_param[2]-intervalo_normal_param[1]
+    cubrimiento_normal_parm[h] <- cubrimiento_normal_param[h]+(0.25>=intervalo_normal_param[1] && 0.25<=intervalo_normal_param[2])
+    
+    titas.boot.param[h,]<-sort(titas.boot.param[h,])
+    intervalo_cuantil_param<-c(quantile(titas.boot.param[h,], 0.025), quantile(titas.boot.param[h,], 0.975))
+    longitud_cuantil_param[h]<-longitud_cuantil_param[h]+intervalo_cuantil_param[2]-intervalo_cuantil_param[1]
+    cubrimiento_cuantil_param[h]<-cubrimiento_cuantil_param[h]+(0.25>=intervalo_cuantil_param[1] && 0.25<=intervalo_cuantil_param[2])
+  }
+}
+
+longitud_cuantil_param <- longitud_cuantil_param/N_2
+cubrimiento_cuantil_param <- cubrimiento_cuantil_param/N_2
+longitud_normal_param <- longitud_normal_param/N_2
+cubrimiento_normal_param <- cubrimiento_normal_param/N_2
+
+resultados_comparacion_param <- data.frame(
+  n = n,
+  Cubrimiento_Percentil = cubrimiento_cuantil_param,
+  Longitud_Percentil = longitud_cuantil_param,
+  Cubrimiento_Normal = cubrimiento_normal_param,
+  Longitud_Normal = longitud_normal_param
+)
+
+print(resultados_comparacion_param)
 
 
 
+# ----- Ejercicio 2.3: estimador truncado -----
 
+n_trunc <- c(10,100,1000)
 
+est_trunc <- function(estimador) {
+  if (estimador>1){
+    return(1)
+  }
+  if (estimador<0){
+    return(0)
+  }
+  else {
+    return(estimador)
+  }
+}
 
+titas.boot.samp.trunc <- matrix(0 , nrow = 3, ncol = 2500)
+estimadores.samp <- c(0,0,0)
+titas.boot.param.trunc <- matrix(0 , nrow = 3, ncol = 2500)
+estimadores.param <- c(0,0,0)
+
+for (k in 1:N_2){
+  for (j in 1:3){
+    muestra <- rbinom(n_trunc[j],1,p_func(SE0,SP0,THETA0))
+    estimadores.samp[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    for (i in 1:2500){
+      muestra_boot <- sample(muestra, replace=TRUE)
+      theta_hat <- (mean(muestra_boot)+SP0-1)/(SE0+SP0-1)
+      titas.boot.samp.trunc[j,i] <- theta_hat
+    }
+  }
+}
+
+for (k in 1:N_2){
+  for (j in 1:3){
+    muestra <- rbinom(n_trunc[j],1,p_func(SE0,SP0,THETA0))
+    estimadores.param[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    for (i in 1:2500){
+      muestra_boot <- sample(muestra, replace=TRUE)
+      theta_hat <- (mean(muestra_boot)+SP0-1)/(SE0+SP0-1)
+      titas.boot.param.trunc[j,i] <- theta_hat
+    }
+  }
+}
