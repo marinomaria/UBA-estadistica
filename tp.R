@@ -3,7 +3,7 @@ library(ggplot2)
 library(latex2exp)
 library(patchwork)
 
-set.seed(72) # Libreta de Maria Delfina Kiss, 72/23
+set.seed(72) # Libreta de Delfina Kiss, 72/23
 # Fijamos los parámetros de Theta, Se y Sp del enunciado
 THETA0 <- 0.25
 SE0 <- 0.90
@@ -162,6 +162,7 @@ Nrep <- 1000
 
 # Usamos la fórmula derivada en el inciso 2.0.2
 p_val <- THETA0 * (SE0 + SP0 - 1) + (1 - SP0)
+
 T_sum <- rbinom(n = Nrep, size = n, prob = p_val)
 
 T_promedio <- T_sum / n
@@ -215,6 +216,8 @@ ggplot(datos_bootstrap, aes(x = theta_est)) +
     axis.title = element_text(size = 11))
 
 
+<<<<<<< Updated upstream
+=======
 
 # ----- Ejercicio 2.2: intervalos de confianza bootstrap -----
 
@@ -283,16 +286,17 @@ titas.boot.param <- matrix(0 , nrow = 6, ncol = 2500)
 
 for (k in 1:N_2){
   for (j in 1:6){
-    muestra <- rbinom(n[j],1,p_func(SE0,SP0,THETA0))
-    estimadores[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
-    muestras_boot <- replicate(2500, sample(muestra, replace = TRUE))
-    titas.boot.param[j, ] <- (colMeans(muestras_boot) + SP0 - 1) / (SE0 + SP0 - 1)
+    muestra <- rbinom(n[j], 1, p_func(SE0,SP0,THETA0))
+    p_hat <- mean(muestra) 
+    estimadores_param[j] <- (p_hat + SP0 - 1) / (SE0 + SP0 - 1)
+    p_hat_boot <- replicate(2500, mean(rbinom(n[j], 1, p_hat)))
+    titas.boot.param[j, ] <- (p_hat_boot + SP0 - 1) / (SE0 + SP0 - 1)
   }
   for (h in 1:6){
     se <- sqrt(mean((titas.boot.param[h,] - mean(titas.boot.param[h,]))**2))
     intervalo_normal_param <- c(estimadores_param[h]-qnorm(0.975)*se, estimadores_param[h]+qnorm(0.975)*se)
     longitud_normal_param[h] <- longitud_normal_param[h]+intervalo_normal_param[2]-intervalo_normal_param[1]
-    cubrimiento_normal_parm[h] <- cubrimiento_normal_param[h]+(0.25>=intervalo_normal_param[1] && 0.25<=intervalo_normal_param[2])
+    cubrimiento_normal_param[h] <- cubrimiento_normal_param[h]+(0.25>=intervalo_normal_param[1] && 0.25<=intervalo_normal_param[2])
     
     titas.boot.param[h,]<-sort(titas.boot.param[h,])
     intervalo_cuantil_param<-c(quantile(titas.boot.param[h,], 0.025), quantile(titas.boot.param[h,], 0.975))
@@ -335,14 +339,18 @@ est_trunc <- function(estimador) {
 }
 
 titas.boot.samp.trunc <- matrix(0 , nrow = 3, ncol = 2500)
-estimadores.samp <- c(0,0,0)
 titas.boot.param.trunc <- matrix(0 , nrow = 3, ncol = 2500)
-estimadores.param <- c(0,0,0)
+
+estimadores.samp.trunc <- matrix(0 , nrow = N_2, ncol = 3)
+estimadores.param.trunc <- matrix(0 , nrow = N_2, ncol = 3)
+
+# No parametrico
 
 for (k in 1:N_2){
   for (j in 1:3){
     muestra <- rbinom(n_trunc[j],1,p_func(SE0,SP0,THETA0))
-    estimadores.samp[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    theta_mom <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    estimadores.samp.trunc[k, j] <- est_trunc(theta_mom)
     for (i in 1:2500){
       muestra_boot <- sample(muestra, replace=TRUE)
       theta_hat <- (mean(muestra_boot)+SP0-1)/(SE0+SP0-1)
@@ -351,14 +359,38 @@ for (k in 1:N_2){
   }
 }
 
+# Parametrico
+
 for (k in 1:N_2){
   for (j in 1:3){
     muestra <- rbinom(n_trunc[j],1,p_func(SE0,SP0,THETA0))
-    estimadores.param[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    theta_mom <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
+    p_hat <- mean(muestra) 
+    estimadores.param.trunc[k, j] <- est_trunc(theta_mom)
     for (i in 1:2500){
-      muestra_boot <- sample(muestra, replace=TRUE)
-      theta_hat <- (mean(muestra_boot)+SP0-1)/(SE0+SP0-1)
+      muestra_boot_param <- rbinom(n_trunc[j], 1, p_hat) 
+      theta_hat <- (mean(muestra_boot_param)+SP0-1)/(SE0+SP0-1)
       titas.boot.param.trunc[j,i] <- theta_hat
     }
   }
 }
+
+resultados_samp <- data.frame(n = n_trunc, Media = 0, Sesgo = 0, Varianza = 0, ECM = 0)
+resultados_param <- data.frame(n = n_trunc, Media = 0, Sesgo = 0, Varianza = 0, ECM = 0)
+
+for (j in 1:3) {
+  theta_trunc_samp <- estimadores.samp.trunc[, j]
+  resultados_samp[j, "Media"] <- mean(theta_trunc_samp)
+  resultados_samp[j, "Sesgo"] <- mean(theta_trunc_samp) - THETA0
+  resultados_samp[j, "Varianza"] <- var(theta_trunc_samp)
+  resultados_samp[j, "ECM"] <- resultados_samp[j, "Varianza"] + resultados_samp[j, "Sesgo"]**2
+
+  theta_trunc_param <- estimadores.param.trunc[, j]
+  resultados_param[j, "Media"] <- mean(theta_trunc_param)
+  resultados_param[j, "Sesgo"] <- mean(theta_trunc_param) - THETA0
+  resultados_param[j, "Varianza"] <- var(theta_trunc_param)
+  resultados_param[j, "ECM"] <- resultados_param[j, "Varianza"] + resultados_param[j, "Sesgo"]**2
+}
+
+print(resultados_samp)
+print(resultados_param)
