@@ -247,9 +247,12 @@ n_scenarios <- matrix(c(
   15, 20,
   56, 40,
   100, 100, 
-  10, 100, 
+  10, 100,  # desbalanceado
   500, 458,
-  1245, 1455
+  1245, 1455,
+  2467, 3201,
+  5000, 4500,
+  9989, 10135
 ), ncol = 2, byrow = TRUE)
 
 prop_rechazos <- numeric(nrow(n_scenarios))
@@ -260,8 +263,10 @@ for (i in 1:nrow(n_scenarios)) {
   n_pre <- n_scenarios[i, 1]
   n_post <- n_scenarios[i, 2]
   
-  x_pre <- rbinom(n = Nrep, size = n_pre, prob = p_func(SE0, SP0, theta_pre))
-  x_post <- rbinom(n = Nrep, size = n_post, prob = p_func(SE0, SP0, theta_post))
+  p_H0 <- p_func(SE0, SP0, THETA0) # Asumimos que estamos bajo H0 para calcular el nivel
+  
+  x_pre <- rbinom(n = Nrep, size = n_pre, prob = p_H0)
+  x_post <- rbinom(n = Nrep, size = n_post, prob = p_H0)
   
   p_hat_pre <- x_pre / n_pre
   p_hat_post <- x_post / n_post
@@ -275,7 +280,11 @@ for (i in 1:nrow(n_scenarios)) {
   prop_rechazos[i] <- mean(rechazos)
 }
 
-print(data.frame(n_pre = n_scenarios[,1], n_post = n_scenarios[,2], Potencia = prop_rechazos))
+print(data.frame(
+  n_pre = n_scenarios[,1], 
+  n_post = n_scenarios[,2], 
+  Nivel_Empirico = prop_rechazos
+  ))
 
 
 
