@@ -216,9 +216,6 @@ ggplot(datos_bootstrap, aes(x = theta_est)) +
     axis.title = element_text(size = 11))
 
 
-<<<<<<< Updated upstream
-=======
-
 # ----- Ejercicio 2.2: intervalos de confianza bootstrap -----
 
 # Definimos los distintos n
@@ -233,15 +230,15 @@ longitud_normal_samp <- c(0,0,0,0,0,0)
 
 estimadores <- c(0,0,0,0,0,0)
 
-titas.boot.samp <- matrix(0 , nrow = 6, ncol = 2500)
+titas.boot.samp <- matrix(0 , nrow = 6, ncol = 1500)
 
-N_2 <- 1000
+N_2 <- 750
 
 for (k in 1:N_2){
   for (j in 1:6){
     muestra <- rbinom(n[j],1,p_func(SE0,SP0,THETA0))
     estimadores[j] <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
-    muestras_boot <- replicate(2500, sample(muestra, replace = TRUE))
+    muestras_boot <- replicate(1500, sample(muestra, replace = TRUE))
     titas.boot.samp[j, ] <- (colMeans(muestras_boot) + SP0 - 1) / (SE0 + SP0 - 1)
   }
   for (h in 1:6){
@@ -282,14 +279,14 @@ longitud_normal_param <- c(0,0,0,0,0,0)
 
 estimadores_param <- c(0,0,0,0,0,0)
 
-titas.boot.param <- matrix(0 , nrow = 6, ncol = 2500)
+titas.boot.param <- matrix(0 , nrow = 6, ncol = 1500)
 
 for (k in 1:N_2){
   for (j in 1:6){
     muestra <- rbinom(n[j], 1, p_func(SE0,SP0,THETA0))
     p_hat <- mean(muestra) 
     estimadores_param[j] <- (p_hat + SP0 - 1) / (SE0 + SP0 - 1)
-    p_hat_boot <- replicate(2500, mean(rbinom(n[j], 1, p_hat)))
+    p_hat_boot <- replicate(1500, mean(rbinom(n[j], 1, p_hat)))
     titas.boot.param[j, ] <- (p_hat_boot + SP0 - 1) / (SE0 + SP0 - 1)
   }
   for (h in 1:6){
@@ -338,8 +335,8 @@ est_trunc <- function(estimador) {
   }
 }
 
-titas.boot.samp.trunc <- matrix(0 , nrow = 3, ncol = 2500)
-titas.boot.param.trunc <- matrix(0 , nrow = 3, ncol = 2500)
+titas.boot.samp.trunc <- matrix(0 , nrow = 3, ncol = 1500)
+titas.boot.param.trunc <- matrix(0 , nrow = 3, ncol = 1500)
 
 estimadores.samp.trunc <- matrix(0 , nrow = N_2, ncol = 3)
 estimadores.param.trunc <- matrix(0 , nrow = N_2, ncol = 3)
@@ -351,7 +348,7 @@ for (k in 1:N_2){
     muestra <- rbinom(n_trunc[j],1,p_func(SE0,SP0,THETA0))
     theta_mom <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
     estimadores.samp.trunc[k, j] <- est_trunc(theta_mom)
-    for (i in 1:2500){
+    for (i in 1:1500){
       muestra_boot <- sample(muestra, replace=TRUE)
       theta_hat <- (mean(muestra_boot)+SP0-1)/(SE0+SP0-1)
       titas.boot.samp.trunc[j,i] <- theta_hat
@@ -367,7 +364,7 @@ for (k in 1:N_2){
     theta_mom <- (mean(muestra)+SP0-1)/(SE0+SP0-1)
     p_hat <- mean(muestra) 
     estimadores.param.trunc[k, j] <- est_trunc(theta_mom)
-    for (i in 1:2500){
+    for (i in 1:1500){
       muestra_boot_param <- rbinom(n_trunc[j], 1, p_hat) 
       theta_hat <- (mean(muestra_boot_param)+SP0-1)/(SE0+SP0-1)
       titas.boot.param.trunc[j,i] <- theta_hat
@@ -394,3 +391,10 @@ for (j in 1:3) {
 
 print(resultados_samp)
 print(resultados_param)
+
+# Distribucion asintotica
+hist(estimadores.samp.trunc[, 3], breaks = 30, main = "Distribución Asintótica de theta truncado", xlab = "Estimador Truncado", freq = FALSE) 
+
+lines(density(estimadores.samp.trunc[, 3]), col = "blue", lwd = 2)
+
+abline(v = 0.25, col = "red", lty = 2)
